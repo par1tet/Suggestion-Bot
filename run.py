@@ -4,12 +4,18 @@ from dotenv import load_dotenv as ld
 import logging
 import asyncio
 
+#Import db
+from app.database.models import async_main
+
 #Import router
 from app.handlers import r
 
 ld()
 
 async def main():
+    #Create db
+    await async_main()
+    
     #Create bot and dispatcher
     bot = Bot(token=gt("TOKEN_BOT"))
     dp =  Dispatcher()
