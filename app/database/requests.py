@@ -21,3 +21,11 @@ async def get_suggests():
         # Get sugget
         suggests = await session.scalars(select(Suggest))
         return [i for i in suggests]
+    
+async def send_asnwer(suggest: Suggest, text_answer: str):
+    async with async_session() as session:
+        # Add anwer
+        suggests = await session.scalars(select(Suggest)) # Get suggest
+        id_suggest = [i for i in suggests if i.id == suggest.id][0].id # Get id suggest for update
+        await session.execute(update(Suggest).where(Suggest.id == id_suggest).values(answer_text=text_answer)) # Update
+        await session.commit()

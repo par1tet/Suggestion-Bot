@@ -5,7 +5,8 @@ from aiogram.filters import Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
-from app.database.requests import new_user, add_suggest, get_suggests
+from app.database.requests import (new_user, add_suggest, get_suggests,
+                                                        send_asnwer)
 
 import app.keyboard as kb
 
@@ -13,8 +14,11 @@ import app.keyboard as kb
 r = Router()
 
 # States
-class Reg(StatesGroup):
+class Stats_send_suggest(StatesGroup):
     suggest = State()
+
+class Stats_answer(StatesGroup):
+    sending_answer = State()
 
 # Global values
 suggest_current_id = 0
@@ -28,11 +32,11 @@ async def cmd_start(message: Message):
 # Command Suggest
 @r.message(Command('suggest'))
 async def cmd_send_suggest(message: Message, state: FSMContext):
-    await state.set_state(Reg.suggest)
+    await state.set_state(Stats_send_suggest.suggest)
     await message.answer(text=f'Вводи свое предложение.\n(Лимит в 1000 символов)')
     
 # Send Suggest
-@r.message(Reg.suggest)
+@r.message(Stats_send_suggest.suggest)
 async def add_in_db(message: Message, state: FSMContext):
     if len(message.text) > 1000:
         await message.answer("К сожелению вы написали больше 1000 сообщений, попробуй сократить текст, и написать снова.")
@@ -74,3 +78,16 @@ async def cb_next(cb: CallbackQuery):
                                         \nТекст: {current_suggest.suggest_text}
                                         \nНомер: {(suggest_current_id + 1)}/{final_id}''',
                         reply_markup = await kb.scroll_suggestion(suggest_current_id,final_id))
+    
+@r.callback_query(F.data == 'answer')
+async def start_answer(cb: CallbackQuery, state: FSMContext):
+    await state.set_state(Stats_answer.sending_answer)
+    await state.update_data(text_suggest=cb.message.text)
+    await cb.answer('')
+    await cb.message.answer(text='Пишите ответ')
+    
+@r.message(Stats_answer.sending_answer)
+async def answer_text_sending(message: Message, state: FSMContext):
+    id_suggest = (int(str(str((await state.get_data())['text_suggest'].split('Номер')[-1]).split(' ')[-1]).split('/')[0]))
+    await send_asnwer(((await get_suggests())[(id_suggest - 1)]),(message.text))
+    await state.clear()
