@@ -18,9 +18,9 @@ async def add_suggest(suggest: str, tg_us: int,  full_name: str) -> None:
         
 async def get_suggests():
     async with async_session() as session:
-        # Get sugget
+        # Get suggets
         suggests = await session.scalars(select(Suggest))
-        return [i for i in suggests]
+        return [i for i in suggests if i.answer_text == '']
     
 async def send_asnwer(suggest: Suggest, text_answer: str):
     async with async_session() as session:
@@ -28,4 +28,11 @@ async def send_asnwer(suggest: Suggest, text_answer: str):
         suggests = await session.scalars(select(Suggest)) # Get suggest
         id_suggest = [i for i in suggests if i.id == suggest.id][0].id # Get id suggest for update
         await session.execute(update(Suggest).where(Suggest.id == id_suggest).values(answer_text=text_answer)) # Update
+        await session.commit()
+        
+async def delete_suggest(id_suggest):
+    async with async_session() as session:
+        # Delete sugget
+        suggests = await session.scalars(select(Suggest))
+        await session.execute(delete(Suggest).where(Suggest.id == [i for i in suggests if i.id == (await get_suggests())[id_suggest].id][0].id))
         await session.commit()
